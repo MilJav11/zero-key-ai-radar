@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive AI Briefing — Zero-Key Radar</title>
+    <meta name="description" content="Real-time AI intelligence dashboard aggregating Hacker News, GitHub trends, and live web scraping.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes pulse-fade {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+        .animate-pulse { animation: pulse-fade 1.5s ease-in-out infinite; }
+    </style>
+</head>
+<body class="bg-[#0a0a0a] text-gray-300 font-sans p-8">
+    <h1 class="text-4xl font-bold text-white mb-2">Executive AI Briefing</h1>
+    <p id="current-time" class="text-gray-500 mb-8"></p>
+
+    <div class="max-w-screen-2xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 mt-10">
+        <!-- AI Radar (Hacker News) -->
+        <div class="bg-[#111111] border border-gray-800 p-6 rounded-xl shadow-lg">
+            <h2 class="text-lg font-bold mb-4 text-white uppercase tracking-wider">AI Radar</h2>
+            <ul id="hn-list"><li class="animate-pulse text-gray-700 text-sm">Fetching radar data...</li></ul>
+        </div>
+        <!-- GitHub Trends -->
+        <div class="bg-[#111111] border border-gray-800 p-6 rounded-xl shadow-lg">
+            <h2 class="text-lg font-bold mb-4 text-white uppercase tracking-wider">GitHub Trends</h2>
+            <ul id="git-list"><li class="animate-pulse text-gray-700 text-sm">Scanning repositories...</li></ul>
+        </div>
+        <!-- Persistent Vault -->
+        <div class="bg-[#111111] border border-gray-800 p-6 rounded-xl shadow-lg">
+            <h2 class="text-lg font-bold mb-4 text-white uppercase tracking-wider">Persistent Vault</h2>
+            <ul id="vault-list"></ul>
+        </div>
+    </div>
+
+    <!-- Live AI Scraper -->
+    <div class="mt-8 bg-[#111111] border border-gray-800 p-6 rounded-xl shadow-lg">
+        <h2 class="text-lg font-bold mb-4 text-white uppercase tracking-wider">Live AI Scraper (Jina Reader)</h2>
+        <div class="flex gap-2 mb-4">
+            <input type="text" id="live-url" placeholder="Paste URL here..." class="w-full bg-black border border-gray-700 text-gray-300 px-4 py-2 rounded focus:outline-none focus:border-green-500">
+            <button onclick="liveScrape()" class="bg-green-700 hover:bg-green-600 text-white px-6 py-2 rounded font-bold transition">Analyze</button>
+        </div>
+        <div id="scrape-result" class="text-sm text-gray-400 font-mono whitespace-pre-wrap max-h-96 overflow-y-auto">Waiting for input...</div>
+    </div>
+
+    <!-- Footer -->
+    <div id="footer-status" class="mt-12 text-center text-xs text-gray-600 border-t border-gray-800 pt-4 pb-4">
+        <span class="text-green-500 font-bold">[ OK ] All Systems Operational</span> | Engine: Jina AI Extraction
+    </div>
+
+<script>
+// ==================== VAULT (PRESERVED) ====================
+document.addEventListener('click', function(e) {
+  if(e.target && e.target.classList.contains('save-btn')) {
+    let src = e.target.getAttribute('data-source') || 'WEB';
+    let li = e.target.closest('li'); if(!li) return;
+    let link = li.querySelector('a');
+    if(link) {
+      let t = link.innerText; let u = link.href;
+      let v = JSON.parse(localStorage.getItem('aiVault')) || [];
+      if(!v.some(i => i.url === u)) { v.push({title: t, url: u, source: src}); localStorage.setItem('aiVault', JSON.stringify(v)); renderVault(); }
+    }
+  }
+  if(e.target && e.target.classList.contains('del-btn')) {
+    let u = e.target.getAttribute('data-url');
+    let v = JSON.parse(localStorage.getItem('aiVault')) || [];
+    v = v.filter(i => i.url !== u); localStorage.setItem('aiVault', JSON.stringify(v)); renderVault();
+  }
+});
+
+function renderVault() {
+  let v = JSON.parse(localStorage.getItem('aiVault')) || [];
+  let colors = { 'HN': 'text-orange-400', 'GIT': 'text-gray-300', 'WEB': 'text-purple-400' };
+  let h = v.map(i => {
+    let c = colors[i.source] || 'text-gray-400';
+    return '<li class="mb-2 text-sm"><span class="text-xs font-bold mr-2 '+c+'">[' + (i.source || 'UNK') + ']</span><a href="'+i.url+'" target="_blank" class="text-blue-400 hover:text-blue-300">'+i.title+'</a> <button class="del-btn text-red-500 ml-2 font-bold" data-url="'+i.url+'">[X]</button></li>';
+  }).join('');
+  let vl = document.getElementById('vault-list');
+  if(vl) { vl.innerHTML = h || '<p class="text-gray-500 text-xs mt-2">Vault is empty.</p>'; }
+}
+
+// ==================== JINA SCRAPER (PRESERVED) ====================
+async function liveScrape() {
+  let url = document.getElementById('live-url').value;
+  let res = document.getElementById('scrape-result');
+  if(!url) return;
+  res.innerHTML = '<span class="text-yellow-500">Extracting data via Jina AI...</span>';
+  try {
+    let response = await fetch('https://r.jina.ai/' + url);
+    if(!response.ok) throw new Error('Network response was not ok');
+    let text = await response.text();
+    res.innerText = text.substring(0, 2500) + (text.length > 2500 ? '\n\n[TEXT TRUNCATED...]' : '');
+  } catch (error) {
+    res.innerHTML = '<span class="text-red-500">Extraction failed: ' + error.message + ' (Possible CORS block by target)</span>';
+  }
+}
+
+// ==================== CLOCK ====================
+function initClock() {
+  const el = document.getElementById('current-time');
+  if (!el) return;
+  const now = new Date();
+  const options = { year: 'numeric', month: 'long', day: 'numeric' };
+  el.textContent = now.toLocaleDateString('en-US', options);
+}
+
+// ==================== HACKER NEWS FETCH ====================
+async function fetchHackerNews() {
+  const list = document.getElementById('hn-list');
+  try {
+    const res = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
+    const ids = await res.json();
+    const top3 = ids.slice(0, 3);
+
+    const stories = await Promise.all(
+      top3.map(id => fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r => r.json()))
+    );
+
+    list.innerHTML = stories.map(story => {
+      const url = story.url || `https://news.ycombinator.com/item?id=${story.id}`;
+      return `<li class="mb-2 text-sm">
+        <a href="${url}" target="_blank" class="text-blue-400 hover:text-blue-300">${story.title}</a>
+        <button class="save-btn ml-2 text-xs text-green-400 font-bold" data-source="HN">[Save]</button>
+        <p class="text-xs text-gray-500 mt-1 mb-3">Score: ${story.score}</p>
+      </li>`;
+    }).join('');
+  } catch (err) {
+    list.innerHTML = '<li class="text-red-500 text-sm">Failed to fetch Hacker News.</li>';
+  }
+}
+
+// ==================== GITHUB FETCH ====================
+async function fetchGitHub() {
+  const list = document.getElementById('git-list');
+  try {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    const dateStr = d.toISOString().split('T')[0];
+
+    const res = await fetch(`https://api.github.com/search/repositories?q=created:>${dateStr}&sort=stars&order=desc`);
+    const data = await res.json();
+    const top3 = (data.items || []).slice(0, 3);
+
+    list.innerHTML = top3.map(repo => {
+      const desc = repo.description || 'No description.';
+      return `<li class="mb-2 text-sm">
+        <a href="${repo.html_url}" target="_blank" class="text-blue-400 hover:text-blue-300">${repo.full_name}</a>
+        <button class="save-btn ml-2 text-xs text-green-400 font-bold" data-source="GIT">[Save]</button>
+        <p class="text-xs text-gray-500 mt-1 mb-3 line-clamp-2">${desc}</p>
+      </li>`;
+    }).join('');
+  } catch (err) {
+    list.innerHTML = '<li class="text-red-500 text-sm">Failed to fetch GitHub trends.</li>';
+  }
+}
+
+// ==================== INITIALIZATION ====================
+window.onload = function() {
+  initClock();
+  renderVault();
+  fetchHackerNews();
+  fetchGitHub();
+};
+</script>
+</body>
+</html>
